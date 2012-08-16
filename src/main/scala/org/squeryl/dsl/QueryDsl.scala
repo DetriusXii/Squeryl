@@ -260,21 +260,46 @@ trait QueryDsl
 
   def update[A](t: Table[A])(s: A =>UpdateStatement):Int = t.update(s)
 
-  def manyToManyRelation[L <: KeyedEntity[_],R <: KeyedEntity[_],A <: KeyedEntity[_]](l: Table[L], r: Table[R]) = new ManyToManyRelationBuilder(l,r,None)
+  def manyToManyRelation[L <: KeyedEntity[_],
+    R <: KeyedEntity[_],
+    A <: KeyedEntity[_]](l: Table[L], 
+        r: Table[R]) = new ManyToManyRelationBuilder(l,r,None, None)
 
-  def manyToManyRelation[L <: KeyedEntity[_],R <: KeyedEntity[_],A <: KeyedEntity[_]](l: Table[L], r: Table[R], nameOfMiddleTable: String) = new ManyToManyRelationBuilder(l,r,Some(nameOfMiddleTable))
+  def manyToManyRelation[L <: KeyedEntity[_],
+    R <: KeyedEntity[_],
+    A <: KeyedEntity[_]](l: Table[L], 
+        r: Table[R], 
+        nameOfMiddleTable: String) = 
+          new ManyToManyRelationBuilder(l,r,Some(nameOfMiddleTable), None)
 
-  class ManyToManyRelationBuilder[L <: KeyedEntity[_], R <: KeyedEntity[_]](l: Table[L], r: Table[R], nameOverride: Option[String]) {
+  def manyToManyRelation[L <: KeyedEntity[_],R <: KeyedEntity[_],A <: KeyedEntity[_]](l: Table[L], 
+      r: Table[R], 
+      nameOfMiddleTable: String,
+      prefix: String) = 
+        new ManyToManyRelationBuilder(l,r,Some(nameOfMiddleTable), Some(prefix))
+  
+  class ManyToManyRelationBuilder[L <: KeyedEntity[_], R <: KeyedEntity[_]](l: Table[L], 
+      r: Table[R], nameOverride: Option[String], prefixOverride: Option[String]) {
 
     def via[A <: KeyedEntity[_]](f: (L,R,A)=>Pair[EqualityExpression,EqualityExpression])(implicit manifestA: Manifest[A], schema: Schema) = {
-      val m2m = new ManyToManyRelationImpl(l,r,manifestA.erasure.asInstanceOf[Class[A]], f, schema, nameOverride)
+      val m2m = new ManyToManyRelationImpl(l,
+          r,
+          manifestA.erasure.asInstanceOf[Class[A]], 
+          f, schema, nameOverride, prefixOverride)
       schema._addTable(m2m)
       m2m
     }
   }
 
-  class ManyToManyRelationImpl[L <: KeyedEntity[_], R <: KeyedEntity[_], A <: KeyedEntity[_]](val leftTable: Table[L], val rightTable: Table[R], aClass: Class[A], f: (L,R,A)=>Pair[EqualityExpression,EqualityExpression], schema: Schema, nameOverride: Option[String])
-    extends Table[A](nameOverride.getOrElse(schema.tableNameFromClass(aClass)), aClass, schema, None) with ManyToManyRelation[L,R,A] {
+  class ManyToManyRelationImpl[L <: KeyedEntity[_], 
+    R <: KeyedEntity[_], 
+    A <: KeyedEntity[_]](val leftTable: Table[L], 
+        val rightTable: Table[R], 
+        aClass: Class[A], 
+        f: (L,R,A)=>Pair[EqualityExpression,EqualityExpression], 
+        schema: Schema, nameOverride: Option[String], prefixOverride: Option[String])
+    extends Table[A](nameOverride.getOrElse(schema.tableNameFromClass(aClass)), 
+        aClass, schema, prefixOverride) with ManyToManyRelation[L,R,A] {
     thisTableOfA =>    
 
     def thisTable = thisTableOfA
