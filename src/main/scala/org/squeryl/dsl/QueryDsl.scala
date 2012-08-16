@@ -407,20 +407,35 @@ trait QueryDsl
   def update[A](t: Table[A])(s: A =>UpdateStatement):Int = t.update(s)
 
   def manyToManyRelation[L,R](l: Table[L], r: Table[R])(implicit kedL: KeyedEntityDef[L,_], kedR: KeyedEntityDef[R,_]) = 
-    new ManyToManyRelationBuilder(l,r,None, kedL, kedR)
+    new ManyToManyRelationBuilder(l,r,None, None, kedL, kedR)
 
   def manyToManyRelation[L,R](l: Table[L], r: Table[R], nameOfMiddleTable: String)(implicit kedL: KeyedEntityDef[L,_], kedR: KeyedEntityDef[R,_]) = 
-    new ManyToManyRelationBuilder(l,r,Some(nameOfMiddleTable), kedL, kedR)
+    new ManyToManyRelationBuilder(l,r,Some(nameOfMiddleTable), None, kedL, kedR)
+  
+  def manyToManyRelation[L,R](l: Table[L], 
+      r: Table[R], 
+      nameOfMiddleTable: String, prefix: String)(
+      implicit kedL: KeyedEntityDef[L,_], kedR: KeyedEntityDef[R,_]) =
+        new ManyToManyRelationBuilder(l, r, Some(nameOfMiddleTable), Some(prefix), kedL, kedR)
 
   class ManyToManyRelationBuilder[L, R](
       l: Table[L], 
       r: Table[R], 
       nameOverride: Option[String],
+      prefix: Option[String],
       kedL: KeyedEntityDef[L,_],
       kedR: KeyedEntityDef[R,_]) {
 
     def via[A](f: (L,R,A)=>Pair[EqualityExpression,EqualityExpression])(implicit manifestA: Manifest[A], schema: Schema, kedA: KeyedEntityDef[A,_]) = {
-      val m2m = new ManyToManyRelationImpl(l,r,manifestA.erasure.asInstanceOf[Class[A]], f, schema, nameOverride, kedL, kedR, kedA)
+      val m2m = 
+        new ManyToManyRelationImpl(l,
+            r,
+            manifestA.erasure.asInstanceOf[Class[A]], 
+            f, 
+            schema, 
+            nameOverride, 
+            prefix,
+            kedL, kedR, kedA)
       schema._addTable(m2m)
       m2m
     }
@@ -435,10 +450,11 @@ trait QueryDsl
       f: (L,R,A)=>Pair[EqualityExpression,EqualityExpression], 
       schema: Schema, 
       nameOverride: Option[String],
+      prefix: Option[String],
       kedL: KeyedEntityDef[L,_],
       kedR: KeyedEntityDef[R,_],
       kedA: KeyedEntityDef[A,_])
-    extends Table[A](nameOverride.getOrElse(schema.tableNameFromClass(aClass)), aClass, schema, None, Some(kedA)) with ManyToManyRelation[L,R,A] {
+    extends Table[A](nameOverride.getOrElse(schema.tableNameFromClass(aClass)), aClass, schema, prefix, Some(kedA)) with ManyToManyRelation[L,R,A] {
     thisTableOfA =>    
 
     def thisTable = thisTableOfA

@@ -1,4 +1,4 @@
 if test -f .sbtconfig; then
   . .sbtconfig
 fi
-exec java ${SBT_OPTS} -jar sbt-launch.jar "$@"
+exec $JAVA_HOME/bin/java ${SBT_OPTS} -jar sbt-launch.jar "$@"
